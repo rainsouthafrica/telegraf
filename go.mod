@@ -4,6 +4,8 @@ go 1.25.7
 
 godebug x509negativeserial=1
 
+replace github.com/gosnmp/gosnmp => ../gosnmp
+
 require (
 	cloud.google.com/go/auth v0.19.0
 	cloud.google.com/go/bigquery v1.74.0
