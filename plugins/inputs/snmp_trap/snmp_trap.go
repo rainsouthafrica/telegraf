@@ -3,9 +3,11 @@ package snmp_trap
 
 import (
 	_ "embed"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/url"
 	"strconv"
@@ -185,6 +187,13 @@ func (s *SnmpTrap) Init() error {
 		}
 		security.PrivacyPassphrase = privPasswdSecret.String()
 		privPasswdSecret.Destroy()
+
+		// RFC 3411 compliant, net-snmp masquerading Engine ID
+		// 0x8000 RFC3411, 0x1F88 net-snmp EID, 0x80 net-snmp random, 4byte random key, 8byte engine start time
+		var engineId = []byte{0x80, 0x00, 0x1F, 0x88, 0x80}
+		engineId = binary.LittleEndian.AppendUint32(engineId, rand.Uint32())
+		engineId = binary.LittleEndian.AppendUint64(engineId, uint64(time.Now().Unix()))
+		security.AuthoritativeEngineID = string(engineId)
 
 		// Enable security settings
 		params.SecurityParameters = &security
