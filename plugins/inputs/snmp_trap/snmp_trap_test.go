@@ -347,8 +347,9 @@ func TestReceiveTrapV3(t *testing.T) {
 		privPass  string // Priv passphrase
 
 		// sender context
-		contextName string
-		engineID    string
+		contextName           string
+		engineID              string
+		authoritativeEngineID string
 
 		// receive
 		entries  []entry
@@ -356,11 +357,12 @@ func TestReceiveTrapV3(t *testing.T) {
 	}{
 		// ordinary v3 coldStart trap no auth and no priv
 		{
-			name:        "noAuthNoPriv",
-			secName:     "peter",
-			secLevel:    "noAuthNoPriv",
-			contextName: "foo_context_name",
-			engineID:    "bar_engine_id",
+			name:                  "noAuthNoPriv foreign authoritative engine",
+			secName:               "peter",
+			secLevel:              "noAuthNoPriv",
+			contextName:           "foo_context_name",
+			engineID:              "bar_engine_id",
+			authoritativeEngineID: "foreign-engine-id",
 			trap: gosnmp.SnmpTrap{
 				Variables: []gosnmp.SnmpPDU{
 					{
@@ -1203,7 +1205,7 @@ func TestReceiveTrapV3(t *testing.T) {
 			default:
 				require.FailNowf(t, "unknown security level %q", tt.secLevel)
 			}
-			security := createSecurityParameters(tt.authProto, tt.privProto, tt.secName, tt.privPass, tt.authPass)
+			security := createSecurityParameters(tt.authProto, tt.privProto, tt.secName, tt.privPass, tt.authPass, tt.authoritativeEngineID)
 
 			client := &gosnmp.GoSNMP{
 				Port:               port,
@@ -1454,7 +1456,7 @@ func TestInvalidAuth(t *testing.T) {
 			default:
 				require.FailNowf(t, "unknown security level %q", tt.secLevel)
 			}
-			security := createSecurityParameters(tt.authProto, tt.privProto, tt.user, tt.privPass, tt.authPass)
+			security := createSecurityParameters(tt.authProto, tt.privProto, tt.user, tt.privPass, tt.authPass, "")
 
 			client := &gosnmp.GoSNMP{
 				Port:               port,
@@ -1488,7 +1490,7 @@ func TestInvalidAuth(t *testing.T) {
 	}
 }
 
-func createSecurityParameters(authProto, privProto, username, privPass, authPass string) *gosnmp.UsmSecurityParameters {
+func createSecurityParameters(authProto, privProto, username, privPass, authPass, authoritativeEngineID string) *gosnmp.UsmSecurityParameters {
 	var authenticationProtocol gosnmp.SnmpV3AuthProtocol
 	switch strings.ToLower(authProto) {
 	case "md5":
@@ -1529,8 +1531,12 @@ func createSecurityParameters(authProto, privProto, username, privPass, authPass
 		privacyProtocol = gosnmp.NoPriv
 	}
 
+	if authoritativeEngineID == "" {
+		authoritativeEngineID = "deadbeef" // valid foreign engine ID used by the sender
+	}
+
 	return &gosnmp.UsmSecurityParameters{
-		AuthoritativeEngineID:    "deadbeef", // has to be between 5 & 32 chars
+		AuthoritativeEngineID:    authoritativeEngineID,
 		AuthoritativeEngineBoots: 1,
 		AuthoritativeEngineTime:  1,
 		UserName:                 username,
